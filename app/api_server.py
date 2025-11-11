@@ -47,6 +47,7 @@ class MessageAnalystAPIServer:
         self._host = host or os.getenv("MESSAGE_ANALYST_API_HOST", "0.0.0.0")
         default_port = int(os.getenv("MESSAGE_ANALYST_API_PORT", "8601"))
         self._port = port or default_port
+        self._public_base_url = os.getenv("MESSAGE_ANALYST_API_URL")
         self._ready_timeout = ready_timeout
 
         self._httpd: Optional[_APIServer] = None
@@ -66,11 +67,19 @@ class MessageAnalystAPIServer:
 
     @property
     def base_url(self) -> str:
-        public_base = os.getenv(
-            "MESSAGE_ANALYST_API_URL",
-            f"http://127.0.0.1:{self.port}",
-        )
+        return self.public_base_url
+
+    @property
+    def public_base_url(self) -> str:
+        public_base = self._public_base_url or self.internal_base_url
         return public_base.rstrip("/")
+
+    @property
+    def internal_base_url(self) -> str:
+        host = self._host
+        if host in {"0.0.0.0", "::", ""}:
+            host = "127.0.0.1"
+        return f"http://{host}:{self.port}".rstrip("/")
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():

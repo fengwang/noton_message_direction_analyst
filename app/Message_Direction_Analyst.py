@@ -280,7 +280,8 @@ if __name__ == "__main__":
         return server
 
     api_server = _get_api_server()
-    api_base_url = api_server.base_url
+    api_internal_base_url = api_server.internal_base_url
+    api_public_base_url = api_server.base_url
 
     if "history" not in st.session_state:
         st.session_state.history = []
@@ -304,7 +305,7 @@ if __name__ == "__main__":
 
     with st.sidebar:
         st.subheader("Live REST endpoint")
-        st.code(f"POST {api_base_url}/api/analyze", language="text")
+        st.code(f"POST {api_public_base_url}/api/analyze", language="text")
         st.caption('Payload: {"query": "..."}')
         st.divider()
         st.subheader("Session signals")
@@ -456,7 +457,7 @@ if __name__ == "__main__":
                 status.write("Aligning your controls with the analyst brief.")
                 status.write("Contacting analysis API.")
                 try:
-                    api_response = _call_api(api_base_url, {"query": composed_prompt})
+                    api_response = _call_api(api_internal_base_url, {"query": composed_prompt})
                 except RuntimeError as api_error:
                     status.update(label="Analysis failed", state="error")
                     analysis_container.error(str(api_error))
