@@ -67,6 +67,14 @@ Environment variables for the API:
 - `MESSAGE_ANALYST_API_URL` (default `http://127.0.0.1:<port>`): base URL the Streamlit process (and your clients) should use when calling the API. Override this if the HTTP endpoint is served behind a proxy/load balancer.
 
 
+### Modern Web Experience
+
+- Immersive hero section with contextual tips and dynamic progress cues keeps the UI focused on essentials.
+- Dual-pane layout separates briefing controls from live diagnostics, tightening the feedback loop as you type.
+- Optional tone, direction, length, empathy, and action toggles inform the backend prompt so REST clients receive consistent guidance.
+- Built-in history view plus copy-to-clipboard makes it easy to reuse refined narratives or audit recent analyses.
+
+
 ### Environment Variables
 
 - `OLLAMA_BASE_URL`: The base URL for the Ollama API.
