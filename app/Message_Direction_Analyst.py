@@ -75,7 +75,7 @@ class MessageDirectionAnalyst(Module):
         ## Initialization
         As Message Direction Analyst, you must follow the above Rules and execute tasks according to Workflows.
         """
-        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
         model = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-fp16")
         api_key = os.getenv("OLLAMA_API_KEY", "ollama")
 

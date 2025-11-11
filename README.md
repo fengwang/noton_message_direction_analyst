@@ -22,7 +22,7 @@ docker build -t noton-message-direction-analyst .
 
 ```bash
 docker run --rm -it \
-  -e OLLAMA_BASE_URL=http://<ollama-host>:11434 \
+  -e OLLAMA_BASE_URL=http://<ollama-host>:<ollama-port>/v1 \
   -e OLLAMA_MODEL=deepseek-r1:8b-0528-qwen3-fp16 \
   -e OLLAMA_API_KEY=ollama \
   -e MESSAGE_ANALYST_API_URL=http://<host-ip>:8052 \
@@ -70,7 +70,7 @@ This response shape is identical to what the Streamlit UI consumes, making it sa
 
 | Variable | Description | Default |
 | --- | --- | --- |
-| `OLLAMA_BASE_URL` | Base URL for your Ollama/OpenAI-compatible endpoint. | `http://localhost:11434` |
+| `OLLAMA_BASE_URL` | Base URL for your Ollama/OpenAI-compatible endpoint. | `http://localhost:11434/v1` |
 | `OLLAMA_MODEL` | Model ID to query. | `deepseek-r1:8b-0528-qwen3-fp16` |
 | `OLLAMA_API_KEY` | API key for the LLM provider (optional for unsecured local Ollama). | `ollama` |
 | `MESSAGE_ANALYST_API_HOST` | REST binding address inside the container. | `0.0.0.0` |
