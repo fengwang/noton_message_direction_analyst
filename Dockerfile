@@ -7,6 +7,7 @@ COPY requirements.txt /app
 RUN python -m pip install -r /app/requirements.txt
 
 COPY /app/Message_Direction_Analyst.py /app/Message_Direction_Analyst.py
+COPY /app/api_server.py /app/api_server.py
 COPY /app/noton /app/noton
 
 EXPOSE 8501

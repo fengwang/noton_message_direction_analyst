@@ -1,5 +1,8 @@
 import os
 import sys
+from typing import Any, Dict
+
+import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -7,6 +10,8 @@ from noton.Module import Module
 from noton.LLM import Ollama
 from noton.Input import TextInput
 from noton.Text import TextFilter
+
+from api_server import MessageAnalystAPIServer
 
 
 class MessageDirectionAnalyst(Module):
@@ -82,6 +87,22 @@ class MessageDirectionAnalyst(Module):
 
 
 
+def _call_api(api_base_url: str, payload: Dict[str, Any], timeout: float = 120.0) -> Dict[str, Any]:
+    """Helper used by the Streamlit UI to talk to the background API server."""
+    endpoint = f"{api_base_url}/api/analyze"
+
+    try:
+        response = requests.post(endpoint, json=payload, timeout=timeout)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        raise RuntimeError(f"Unable to reach REST API endpoint at {endpoint}. Reason: {exc}") from exc
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise RuntimeError("REST API returned an invalid JSON payload.") from exc
+
+
 if __name__ == "__main__":
     import streamlit as st
     from st_copy import copy_button
@@ -92,16 +113,42 @@ if __name__ == "__main__":
 
     st.title("Refine Your Message 🖊️")
 
+    @st.cache_resource(show_spinner=False)
+    def _get_api_server() -> MessageAnalystAPIServer:
+        server = MessageAnalystAPIServer(model.forward)
+        server.start()
+        return server
 
-    # Text input for user query
-    user_query = st.text_area("Your message to refine:", placeholder="Draft a message to my girlfriend Mary, to check if it possible next weekend hiking to Rotlech Wasserfall.", height=250)
+    api_server = _get_api_server()
+    api_base_url = api_server.base_url
 
-    if user_query:
-        with st.spinner("Analyzing and refining your message..."):
-            response = model.forward(user_query)
-        st.subheader("Refined Message:")
-        #st.write(response)
-        st.markdown(response)
-        copy_button(response)
+    st.caption(f"REST endpoint available at `{api_base_url}/api/analyze`")
 
+    user_query = st.text_area(
+        "Your message to refine:",
+        placeholder="Draft a message to my girlfriend Mary, to check if it possible next weekend hiking to Rotlech Wasserfall.",
+        height=250,
+    )
+
+    if user_query and user_query.strip():
+        with st.spinner("Analyzing and refining your message via REST API..."):
+            try:
+                api_response = _call_api(api_base_url, {"query": user_query.strip()})
+                response_text = api_response.get("response", "")
+                metadata = api_response.get("meta", {})
+            except RuntimeError as api_error:
+                st.error(str(api_error))
+                st.stop()
+
+        if not response_text:
+            st.warning("API call was successful but returned an empty response.")
+        else:
+            st.subheader("Refined Message:")
+            st.markdown(response_text)
+            copy_button(response_text)
+
+            if metadata:
+                took = metadata.get("took_ms")
+                if took is not None:
+                    st.caption(f"Generated via API in {took} ms")
 
