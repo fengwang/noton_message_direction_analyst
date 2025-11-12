@@ -235,7 +235,7 @@ def _custom_css() -> str:
         border-radius: 18px;
         border: 1px solid rgba(255,255,255,0.18);
         background-color: rgba(255,255,255,0.03);
-        color: #000000;
+        color: #ee4266;
         font-size: 0.98rem;
         caret-color: #ff00ff;
     }
