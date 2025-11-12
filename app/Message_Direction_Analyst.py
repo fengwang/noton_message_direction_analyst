@@ -16,14 +16,14 @@ from noton.Text import TextFilter
 from api_server import MessageAnalystAPIServer
 
 
-class MessageDirectionAnalyst(Module):
-    def __init__(self):
-        super().__init__()
-        system_prompt = """
+def _build_system_prompt(language: str) -> str:
+    normalized_language = (language or "English").strip() or "English"
+    return textwrap.dedent(
+        f"""
         # Role: Message Direction Analyst
 
         ## Profile
-        - language: English
+        - language: {normalized_language}
         - description: A specialized AI role designed to dissect the core themes, underlying intent, and directional focus of original messages, while generating refined content that aligns with user-defined objectives and linguistic expectations.
         - background: Developed to address the growing need for precise content analysis and optimization in fields such as marketing, research, and creative writing, where understanding and repurposing message direction is critical.
         - personality: Analytical, precise, adaptable, and user-focused.
@@ -36,11 +36,11 @@ class MessageDirectionAnalyst(Module):
            - **Thematic Extraction**: Identifies primary and secondary themes within text through linguistic pattern recognition.
            - **Directional Vocabulary Accumulation**: Builds and updates a repository of context-specific search terms and directional cues.
            - **Perspective Generation**: Proposes alternative angles or interpretations that enhance clarity or align with strategic goals.
-           - **Content Refinement**: Transforms raw or unstructured text into polished, contextually appropriate English content.
+           - **Content Refinement**: Transforms raw or unstructured text into polished, contextually appropriate {normalized_language} content.
 
         2. **Supporting Technical & Methodological Skills**
            - **Algorithmic Pattern Recognition**: Applies machine learning techniques to identify recurring directional motifs in text corpora.
-           - **Language Modeling**: Ensures output adheres to native English conventions, idioms, and syntactic norms.
+           - **Language Modeling**: Ensures output adheres to native {normalized_language} conventions, idioms, and syntactic norms.
            - **User Intent Interpretation**: Aligns generated content with explicit user objectives through iterative feedback loops.
            - **Iterative Feedback Integration**: Refines outputs based on user selections, prioritizing alignment with core goals.
 
@@ -60,7 +60,7 @@ class MessageDirectionAnalyst(Module):
 
         3. **Constraints**
            - **No Biased Content Generation**: Ensure outputs remain neutral and avoid reinforcing stereotypes or harmful narratives.
-           - **Language Adherence**: Deliver content exclusively in native English unless otherwise instructed.
+           - **Language Adherence**: Deliver content exclusively in native {normalized_language} unless otherwise instructed.
            - **No Assumptions**: Refrain from inferring unspoken context or intent beyond what is explicitly stated.
            - **Format Compliance**: Avoid markdown, code blocks, or non-textual elements in final outputs.
 
@@ -69,19 +69,41 @@ class MessageDirectionAnalyst(Module):
         - Goal: Analyze the original message to identify its directional focus, synthesize multiple interpretive options, and deliver polished content aligned with user-selected priorities.
         - Step 1: Decompose the original text into linguistic components (e.g., keywords, sentiment, structure) to isolate core themes and directional cues.
         - Step 2: Cross-reference directional vocabulary and algorithmic patterns to generate 3–5 distinct interpretive frameworks or angles.
-        - Step 3: Prioritize and refine the selected framework into a polished, context-appropriate English output, incorporating user-specified objectives (e.g., tone, audience, length).
+        - Step 3: Prioritize and refine the selected framework into a polished, context-appropriate {normalized_language} output, incorporating user-specified objectives (e.g., tone, audience, length).
         - Expected result: A tailored, linguistically precise content piece that distills the original message’s direction while aligning with user-defined strategic goals.
 
         ## Initialization
         As Message Direction Analyst, you must follow the above Rules and execute tasks according to Workflows.
         """
+    ).strip()
+
+
+class MessageDirectionAnalyst(Module):
+    def __init__(self, default_language: str = "English"):
+        super().__init__()
+        self.language = (default_language or "English").strip() or "English"
+        system_prompt = _build_system_prompt(self.language)
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
         model = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b-0528-qwen3-fp16")
         api_key = os.getenv("OLLAMA_API_KEY", "ollama")
 
         self.input = TextInput()
-        self.ollama = Ollama(base_url=base_url, model=model, api_key=api_key, system_prompt=system_prompt, enable_history=False)
+        self.ollama = Ollama(
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+            system_prompt=system_prompt,
+            enable_history=False,
+        )
         self.filter = TextFilter( "</think>" )
+
+    def set_language(self, language: str) -> None:
+        normalized_language = (language or "").strip()
+        if not normalized_language or normalized_language == self.language:
+            return
+        self.language = normalized_language
+        self.ollama.system_prompt_ = _build_system_prompt(self.language)
+        self.ollama.conversation_history_ = []
 
     def forward(self, user_input:str ) -> str:
 
@@ -135,7 +157,9 @@ def _compose_analysis_prompt(
     energy: int,
     actionable: bool,
     empathy: bool,
+    language: str,
 ) -> str:
+    normalized_language = (language or "English").strip() or "English"
     focus_section = ", ".join(focus_points) if focus_points else "core clarity and authentic intent"
     action_clause = (
         "Close with 1 actionable nudge or next step tailored to the audience."
@@ -175,7 +199,8 @@ def _compose_analysis_prompt(
 
         Output requirements:
         - Deliver a single refined message (plain text, no markdown bullets).
-        - Keep the prose fluent and human, mirroring a native English writer.
+        - Keep the prose fluent and human, mirroring a native {normalized_language} writer.
+        - Ensure the final response is written entirely in {normalized_language}.
         - Honor the requested length and tone even if you must rearrange content.
 
         Original message:
@@ -323,6 +348,7 @@ if __name__ == "__main__":
     left_col, right_col = st.columns([3, 2], gap="large")
 
     tone_options = ["Warm", "Neutral", "Energetic", "Formal"]
+    language_options = ["English", "Chinese", "German", "French"]
     direction_options = ["Clarify", "Persuade", "Inspire", "Reassure"]
     focus_options = [
         "Call-to-action clarity",
@@ -353,6 +379,12 @@ if __name__ == "__main__":
         st.subheader("Craft your brief")
 
         tone = st.select_slider("Tone palette", options=tone_options, value="Warm")
+        language = st.selectbox(
+            "Language",
+            options=language_options,
+            index=0,
+            help="Select the language for the refined response.",
+        )
         direction = st.segmented_control(
             "Primary direction",
             options=direction_options,
@@ -440,6 +472,7 @@ if __name__ == "__main__":
         if not trimmed:
             st.warning("Add a message draft to analyze.")
         else:
+            model.set_language(language)
             composed_prompt = _compose_analysis_prompt(
                 trimmed,
                 tone=tone,
@@ -451,6 +484,7 @@ if __name__ == "__main__":
                 energy=energy,
                 actionable=actionable,
                 empathy=empathy,
+                language=language,
             )
 
             with st.status("Synthesizing direction...", expanded=True) as status:
@@ -510,6 +544,7 @@ if __name__ == "__main__":
             summary_points = [
                 f"**Direction:** {direction}",
                 f"**Tone palette:** {tone} · energy level {energy}/5",
+                f"**Language:** {language}",
                 f"**Audience:** {audience}",
                 f"**Length profile:** {length_pref}",
                 f"**Depth mode:** {depth_mode}",
